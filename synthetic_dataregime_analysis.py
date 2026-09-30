@@ -12,18 +12,9 @@ import pickle
 import warnings
 warnings.filterwarnings('ignore')
 
-# Ground truth parameters
-GROUND_TRUTH_PARAMS = {
-    'surface_water_diffusion_coeff': 8.0,
-    'soil_water_diffusion_coeff': 1.0, 
-    'biomass_diffusion_coeff': 0.05,
-    'evaporation_rate': 0.3,
-    'seepage_rate': 0.4,
-    'mortality_rate': 0.6,
-    'infiltration_rate': 2.1,
-    'plant_uptake_rate': 1.9,
-    'water_use_efficiency': 0.55
-}
+# Ground truth per regime: the 1-site and 4-site experiments were generated with
+# different coefficients. regime1 is always the 1-site run, regime2 the 4-site run.
+from synthetic_ground_truth import GROUND_TRUTH_1SITE, GROUND_TRUTH_4SITE, PARAM_NAMES
 
 def load_regime_parameters(results_dir: str, regime_name: str):
     """Load final parameters from all models in a regime."""
@@ -71,7 +62,7 @@ def calculate_relative_error(estimated_values, true_value):
 def create_regime_boxplots(regime1_params, regime2_params, regime1_name="One site", regime2_name="Four sites", save_path=None):
     """Create side-by-side boxplots comparing parameter estimates between regimes."""
     
-    parameter_names = list(GROUND_TRUTH_PARAMS.keys())
+    parameter_names = PARAM_NAMES
     
     fig, axes = plt.subplots(3, 3, figsize=(18, 15))
     axes = axes.flatten()
@@ -89,9 +80,9 @@ def create_regime_boxplots(regime1_params, regime2_params, regime1_name="One sit
             continue
         
         # Calculate relative errors
-        true_val = GROUND_TRUTH_PARAMS[param_name]
-        regime1_rel_errors = calculate_relative_error(regime1_vals, true_val)
-        regime2_rel_errors = calculate_relative_error(regime2_vals, true_val)
+        true_val1, true_val2 = GROUND_TRUTH_1SITE[param_name], GROUND_TRUTH_4SITE[param_name]
+        regime1_rel_errors = calculate_relative_error(regime1_vals, true_val1)
+        regime2_rel_errors = calculate_relative_error(regime2_vals, true_val2)
         
         # Create boxplots for relative errors
         box_data = [regime1_rel_errors, regime2_rel_errors]
@@ -148,7 +139,7 @@ def print_simple_summary(regime1_params, regime2_params, regime1_name="1-site", 
     print("(Using Relative Error)")
     print("=" * 80)
     
-    parameter_names = list(GROUND_TRUTH_PARAMS.keys())
+    parameter_names = PARAM_NAMES
     
     print(f"\nParameter-wise Relative Error Comparison:")
     print("-" * 80)
@@ -166,11 +157,11 @@ def print_simple_summary(regime1_params, regime2_params, regime1_name="1-site", 
         if not regime1_vals or not regime2_vals:
             continue
             
-        true_val = GROUND_TRUTH_PARAMS[param_name]
+        true_val1, true_val2 = GROUND_TRUTH_1SITE[param_name], GROUND_TRUTH_4SITE[param_name]
         
         # Calculate mean relative errors
-        regime1_rel_errors = calculate_relative_error(regime1_vals, true_val)
-        regime2_rel_errors = calculate_relative_error(regime2_vals, true_val)
+        regime1_rel_errors = calculate_relative_error(regime1_vals, true_val1)
+        regime2_rel_errors = calculate_relative_error(regime2_vals, true_val2)
         
         regime1_mean_rel_err = np.mean(regime1_rel_errors)
         regime2_mean_rel_err = np.mean(regime2_rel_errors)
@@ -184,7 +175,7 @@ def print_simple_summary(regime1_params, regime2_params, regime1_name="1-site", 
         improvements.append(improvement)
         
         param_display = param_name.replace('_', ' ').title()[:24]
-        true_display = f"{true_val:.3f}"
+        true_display = f"{true_val1:g} / {true_val2:g}"
         rel_err1_display = f"{regime1_mean_rel_err:.2f}%"
         rel_err2_display = f"{regime2_mean_rel_err:.2f}%"
         imp_display = f"{improvement:+.1f}%"
@@ -211,9 +202,9 @@ def print_simple_summary(regime1_params, regime2_params, regime1_name="1-site", 
             regime2_vals = regime2_params.get(param_name, [])
             
             if regime1_vals and regime2_vals:
-                true_val = GROUND_TRUTH_PARAMS[param_name]
-                all_rel_errors_1.extend(calculate_relative_error(regime1_vals, true_val))
-                all_rel_errors_2.extend(calculate_relative_error(regime2_vals, true_val))
+                true_val1, true_val2 = GROUND_TRUTH_1SITE[param_name], GROUND_TRUTH_4SITE[param_name]
+                all_rel_errors_1.extend(calculate_relative_error(regime1_vals, true_val1))
+                all_rel_errors_2.extend(calculate_relative_error(regime2_vals, true_val2))
         
         if all_rel_errors_1 and all_rel_errors_2:
             overall_mean_1 = np.mean(all_rel_errors_1)
@@ -235,7 +226,7 @@ def print_simple_summary(regime1_params, regime2_params, regime1_name="1-site", 
 def save_results_to_csv(regime1_params, regime2_params, regime1_name="1-site", regime2_name="4-site", output_path=None):
     """Save detailed comparison results to CSV files."""
     
-    parameter_names = list(GROUND_TRUTH_PARAMS.keys())
+    parameter_names = PARAM_NAMES
     
     # Prepare data for summary CSV
     summary_data = []
@@ -248,11 +239,11 @@ def save_results_to_csv(regime1_params, regime2_params, regime1_name="1-site", r
         if not regime1_vals or not regime2_vals:
             continue
             
-        true_val = GROUND_TRUTH_PARAMS[param_name]
+        true_val1, true_val2 = GROUND_TRUTH_1SITE[param_name], GROUND_TRUTH_4SITE[param_name]
         
         # Calculate relative errors
-        regime1_rel_errors = calculate_relative_error(regime1_vals, true_val)
-        regime2_rel_errors = calculate_relative_error(regime2_vals, true_val)
+        regime1_rel_errors = calculate_relative_error(regime1_vals, true_val1)
+        regime2_rel_errors = calculate_relative_error(regime2_vals, true_val2)
         
         # Calculate statistics
         regime1_mean_rel_err = np.mean(regime1_rel_errors)
@@ -271,7 +262,8 @@ def save_results_to_csv(regime1_params, regime2_params, regime1_name="1-site", r
         # Add to summary data
         summary_data.append({
             'Parameter': param_name,
-            'True_Value': true_val,
+            f'{regime1_name}_True_Value': true_val1,
+            f'{regime2_name}_True_Value': true_val2,
             f'{regime1_name}_Mean_RelErr_Percent': regime1_mean_rel_err,
             f'{regime2_name}_Mean_RelErr_Percent': regime2_mean_rel_err,
             f'{regime1_name}_Median_RelErr_Percent': regime1_median_rel_err,
@@ -288,7 +280,8 @@ def save_results_to_csv(regime1_params, regime2_params, regime1_name="1-site", r
         for i in range(max_models):
             row = {
                 'Parameter': param_name,
-                'True_Value': true_val,
+                f'{regime1_name}_True_Value': true_val1,
+                f'{regime2_name}_True_Value': true_val2,
                 'Model_Index': i
             }
             
@@ -502,18 +495,9 @@ import pickle
 import warnings
 warnings.filterwarnings('ignore')
 
-# Ground truth parameters
-GROUND_TRUTH_PARAMS = {
-    'surface_water_diffusion_coeff': 8.0,
-    'soil_water_diffusion_coeff': 1.0, 
-    'biomass_diffusion_coeff': 0.05,
-    'evaporation_rate': 0.3,
-    'seepage_rate': 0.4,
-    'mortality_rate': 0.6,
-    'infiltration_rate': 2.1,
-    'plant_uptake_rate': 1.9,
-    'water_use_efficiency': 0.55
-}
+# Ground truth per regime: the 1-site and 4-site experiments were generated with
+# different coefficients. regime1 is always the 1-site run, regime2 the 4-site run.
+from synthetic_ground_truth import GROUND_TRUTH_1SITE, GROUND_TRUTH_4SITE, PARAM_NAMES
 
 def load_regime_parameters(results_dir: str, regime_name: str):
     """Load final parameters from all models in a regime."""
@@ -561,7 +545,7 @@ def calculate_relative_error(estimated_values, true_value):
 def create_regime_boxplots(regime1_params, regime2_params, regime1_name="One site", regime2_name="Four sites", save_path=None):
     """Create side-by-side boxplots comparing parameter estimates between regimes."""
     
-    parameter_names = list(GROUND_TRUTH_PARAMS.keys())
+    parameter_names = PARAM_NAMES
     
     fig, axes = plt.subplots(3, 3, figsize=(18, 15))
     axes = axes.flatten()
@@ -579,9 +563,9 @@ def create_regime_boxplots(regime1_params, regime2_params, regime1_name="One sit
             continue
         
         # Calculate relative errors
-        true_val = GROUND_TRUTH_PARAMS[param_name]
-        regime1_rel_errors = calculate_relative_error(regime1_vals, true_val)
-        regime2_rel_errors = calculate_relative_error(regime2_vals, true_val)
+        true_val1, true_val2 = GROUND_TRUTH_1SITE[param_name], GROUND_TRUTH_4SITE[param_name]
+        regime1_rel_errors = calculate_relative_error(regime1_vals, true_val1)
+        regime2_rel_errors = calculate_relative_error(regime2_vals, true_val2)
         
         # Create boxplots for relative errors
         box_data = [regime1_rel_errors, regime2_rel_errors]
@@ -638,7 +622,7 @@ def print_simple_summary(regime1_params, regime2_params, regime1_name="1-site", 
     print("(Using Relative Error)")
     print("=" * 80)
     
-    parameter_names = list(GROUND_TRUTH_PARAMS.keys())
+    parameter_names = PARAM_NAMES
     
     print(f"\nParameter-wise Relative Error Comparison:")
     print("-" * 80)
@@ -656,11 +640,11 @@ def print_simple_summary(regime1_params, regime2_params, regime1_name="1-site", 
         if not regime1_vals or not regime2_vals:
             continue
             
-        true_val = GROUND_TRUTH_PARAMS[param_name]
+        true_val1, true_val2 = GROUND_TRUTH_1SITE[param_name], GROUND_TRUTH_4SITE[param_name]
         
         # Calculate mean relative errors
-        regime1_rel_errors = calculate_relative_error(regime1_vals, true_val)
-        regime2_rel_errors = calculate_relative_error(regime2_vals, true_val)
+        regime1_rel_errors = calculate_relative_error(regime1_vals, true_val1)
+        regime2_rel_errors = calculate_relative_error(regime2_vals, true_val2)
         
         regime1_mean_rel_err = np.mean(regime1_rel_errors)
         regime2_mean_rel_err = np.mean(regime2_rel_errors)
@@ -674,7 +658,7 @@ def print_simple_summary(regime1_params, regime2_params, regime1_name="1-site", 
         improvements.append(improvement)
         
         param_display = param_name.replace('_', ' ').title()[:24]
-        true_display = f"{true_val:.3f}"
+        true_display = f"{true_val1:g} / {true_val2:g}"
         rel_err1_display = f"{regime1_mean_rel_err:.2f}%"
         rel_err2_display = f"{regime2_mean_rel_err:.2f}%"
         imp_display = f"{improvement:+.1f}%"
@@ -701,9 +685,9 @@ def print_simple_summary(regime1_params, regime2_params, regime1_name="1-site", 
             regime2_vals = regime2_params.get(param_name, [])
             
             if regime1_vals and regime2_vals:
-                true_val = GROUND_TRUTH_PARAMS[param_name]
-                all_rel_errors_1.extend(calculate_relative_error(regime1_vals, true_val))
-                all_rel_errors_2.extend(calculate_relative_error(regime2_vals, true_val))
+                true_val1, true_val2 = GROUND_TRUTH_1SITE[param_name], GROUND_TRUTH_4SITE[param_name]
+                all_rel_errors_1.extend(calculate_relative_error(regime1_vals, true_val1))
+                all_rel_errors_2.extend(calculate_relative_error(regime2_vals, true_val2))
         
         if all_rel_errors_1 and all_rel_errors_2:
             overall_mean_1 = np.mean(all_rel_errors_1)
@@ -725,7 +709,7 @@ def print_simple_summary(regime1_params, regime2_params, regime1_name="1-site", 
 def save_results_to_csv(regime1_params, regime2_params, regime1_name="1-site", regime2_name="4-site", output_path=None):
     """Save detailed comparison results to CSV files."""
     
-    parameter_names = list(GROUND_TRUTH_PARAMS.keys())
+    parameter_names = PARAM_NAMES
     
     # Prepare data for summary CSV
     summary_data = []
@@ -738,11 +722,11 @@ def save_results_to_csv(regime1_params, regime2_params, regime1_name="1-site", r
         if not regime1_vals or not regime2_vals:
             continue
             
-        true_val = GROUND_TRUTH_PARAMS[param_name]
+        true_val1, true_val2 = GROUND_TRUTH_1SITE[param_name], GROUND_TRUTH_4SITE[param_name]
         
         # Calculate relative errors
-        regime1_rel_errors = calculate_relative_error(regime1_vals, true_val)
-        regime2_rel_errors = calculate_relative_error(regime2_vals, true_val)
+        regime1_rel_errors = calculate_relative_error(regime1_vals, true_val1)
+        regime2_rel_errors = calculate_relative_error(regime2_vals, true_val2)
         
         # Calculate statistics
         regime1_mean_rel_err = np.mean(regime1_rel_errors)
@@ -761,7 +745,8 @@ def save_results_to_csv(regime1_params, regime2_params, regime1_name="1-site", r
         # Add to summary data
         summary_data.append({
             'Parameter': param_name,
-            'True_Value': true_val,
+            f'{regime1_name}_True_Value': true_val1,
+            f'{regime2_name}_True_Value': true_val2,
             f'{regime1_name}_Mean_RelErr_Percent': regime1_mean_rel_err,
             f'{regime2_name}_Mean_RelErr_Percent': regime2_mean_rel_err,
             f'{regime1_name}_Median_RelErr_Percent': regime1_median_rel_err,
@@ -778,7 +763,8 @@ def save_results_to_csv(regime1_params, regime2_params, regime1_name="1-site", r
         for i in range(max_models):
             row = {
                 'Parameter': param_name,
-                'True_Value': true_val,
+                f'{regime1_name}_True_Value': true_val1,
+                f'{regime2_name}_True_Value': true_val2,
                 'Model_Index': i
             }
             

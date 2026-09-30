@@ -8,18 +8,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 #%%
-GROUND_TRUTH = {
-    "infiltration_rate":             0.2,
-    "seepage_rate":                  0.8,
-    "plant_uptake_rate":             0.35,
-    "mortality_rate":                0.6,
-    "evaporation_rate":              0.6,
-    "water_use_efficiency":          0.35,
-    "surface_water_diffusion_coeff": 8.0,
-    "soil_water_diffusion_coeff":    1.0,
-    "biomass_diffusion_coeff":       0.05,
-}
-PARAM_NAMES = list(GROUND_TRUTH.keys())
+from synthetic_ground_truth import (
+    GROUND_TRUTH_1SITE, GROUND_TRUTH_4SITE, PARAM_NAMES, ground_truth_for_run,
+)
 
 PRETTY_NAMES = {
     "infiltration_rate":             "Infiltration rate",
@@ -33,9 +24,11 @@ PRETTY_NAMES = {
     "biomass_diffusion_coeff":       "Biomass diffusion",
 }
 
+# (label, results dir, ground truth the regime's data was generated with).
+# The two experiments use different coefficients, so each is scored against its own.
 REGIMES = [
-    ("1 site",  os.path.join("results", "synthetic_invPDE_1site", "results")),
-    ("4 sites", os.path.join("results", "synthetic_invPDE_4site", "results")),
+    ("1 site",  os.path.join("results", "synthetic_invPDE_1site", "results"), GROUND_TRUTH_1SITE),
+    ("4 sites", os.path.join("results", "synthetic_invPDE_4site", "results"), GROUND_TRUTH_4SITE),
 ]
 REGIME_COLORS = {"1 site": "#d62728", "4 sites": "#1f77b4"}
 
@@ -54,7 +47,7 @@ OUT_DIR = os.path.join("results", "param_comparison_1site_vs_4site")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 
-def load_rel_errors(results_dir):
+def load_rel_errors(results_dir, default_truth):
     """Returns array of shape (n_runs, n_params) of |learned - truth| / truth."""
     paths = sorted(glob(os.path.join(results_dir, "result_*.json")))
     if not paths:
@@ -64,7 +57,8 @@ def load_rel_errors(results_dir):
         with open(p) as f:
             run = json.load(f)
         last = run["parameter_history"][-1]
-        row = [abs(last[n] - GROUND_TRUTH[n]) / GROUND_TRUTH[n] for n in PARAM_NAMES]
+        truth = ground_truth_for_run(run, default_truth)
+        row = [abs(last[n] - truth[n]) / truth[n] for n in PARAM_NAMES]
         rows.append(row)
     return np.array(rows)
 
@@ -203,8 +197,8 @@ def print_table(regime_errors):
 
 def main():
     regime_errors = {}
-    for label, path in REGIMES:
-        regime_errors[label] = load_rel_errors(path)
+    for label, path, truth in REGIMES:
+        regime_errors[label] = load_rel_errors(path, truth)
         print(f"Loaded {regime_errors[label].shape[0]} runs from {path} ({label})")
     print_table(regime_errors)
     plot_relerr(regime_errors)
