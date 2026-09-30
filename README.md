@@ -83,6 +83,7 @@ Parameters are recovered from data generated with known ground-truth values.
 | `find_stable_seed.py` | Find a seed that trains stably for biomass multipliers 750, 1500 and 3000 |
 | `multiplier_check_analysis.py` | Compare runs with different biomass multipliers |
 | `realdata_test_invPDE.py` | Score the fitted models on the held-out sites |
+| `compare_heldout_forcing.py` | Held-out scores under the published setup vs with the rainfall and step-size fixes |
 | `realdata_parameter_analysis.py` | Agreement of learned parameters across runs |
 | `realdata_parameter_correlations.py` | Correlations and trade-offs between learned parameters |
 | `compare_invPDE_realdata_params.py` | Parameter trajectories across all real-data runs |

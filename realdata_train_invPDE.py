@@ -282,11 +282,15 @@ class invRietkerk(nn.Module):
 class RealDataLoader:
     def __init__(self, data_dir: str, selected_sites: List[str] = None,
                  device: Optional[torch.device] = None,
-                 use_weekly_precip: bool = True):
+                 use_weekly_precip: bool = True,
+                 check_weekly: bool = True):
         self.data_dir = data_dir
         self.selected_sites = selected_sites
         self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.use_weekly_precip = use_weekly_precip
+        # False passes the weekly CSVs through untouched (no clipping, no completeness
+        # check); only for reproducing results computed before the check existed.
+        self.check_weekly = check_weekly
         self.location_data = {}
         self.scaler = StandardScaler()
 
@@ -372,7 +376,10 @@ class RealDataLoader:
                 for year in weekly_df['year'].unique():
                     year_data = weekly_df[weekly_df['year'] == year].sort_values('week')
                     # ERA5 contains tiny negative values (~-1e-5 mm/day); rain cannot be negative
-                    weekly_precip_dict[int(year)] = year_data['precipitation_mm_per_day'].clip(lower=0.0).tolist()
+                    rates = year_data['precipitation_mm_per_day']
+                    if self.check_weekly:
+                        rates = rates.clip(lower=0.0)
+                    weekly_precip_dict[int(year)] = rates.tolist()
                 print(f"  Loaded weekly precipitation: {len(weekly_precip_dict)} years")
             else:
                 print(f"  Warning: Weekly precipitation file not found: {weekly_precip_file}")
@@ -403,8 +410,8 @@ class RealDataLoader:
                         'precipitation': precip_dict[year]
                     }
                     if self.use_weekly_precip:
-                        if year in weekly_precip_dict and weekly_precip_is_complete(
-                                weekly_precip_dict[year], precip_dict[year]):
+                        if year in weekly_precip_dict and (not self.check_weekly or weekly_precip_is_complete(
+                                weekly_precip_dict[year], precip_dict[year])):
                             entry['weekly_precipitation'] = weekly_precip_dict[year]
                         else:
                             # Fallback: distribute annual total evenly across 52 weeks

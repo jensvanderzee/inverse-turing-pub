@@ -58,6 +58,7 @@ def build_model_from_row(row: pd.Series) -> invRietkerk:
 def evaluate_model_on_site(
     model: invRietkerk,
     time_series: list,
+    steps_per_week: int = STEPS_PER_WEEK,
 ) -> dict:
     """
     Run forward simulation on a single test site and compute metrics.
@@ -93,7 +94,7 @@ def evaluate_model_on_site(
                     pred_soil_water,
                     pred_biomass,
                     weekly_precipitation=weekly_precip,
-                    steps_per_week=STEPS_PER_WEEK,
+                    steps_per_week=steps_per_week,
                 )
             )
 
