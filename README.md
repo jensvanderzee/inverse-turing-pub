@@ -44,7 +44,7 @@ so they can also be stepped through interactively.
 |:--|:--|
 | `download_era5_precip.py` | Download ERA5 daily precipitation through the Copernicus CDS API and compute weekly averages (needs `~/.cdsapirc`) |
 | `download_era5_precip_gee.py` | Same as above, but through Google Earth Engine |
-| `download_missing_weekly_precip.py` | Create AOI files and fetch weekly precipitation for the subsites that only had annual totals (`j`, `k`) |
+| `download_missing_weekly_precip.py` | Rebuild the weekly precipitation for held-out subsites `j` and `k` from hourly ERA5, with the same source and processing as the training sites (`--project <Earth Engine project>`) |
 | `view_site.py` | Quick look at the NDVI raster for one site and year |
 | `plot_site_map.py` | Map of all subsite locations |
 
