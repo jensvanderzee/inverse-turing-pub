@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 160" font-family="Georgia, serif">
+  <style>
+    .stroke   { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .pde      { stroke: #1f6feb; }
+    .rcn      { stroke: #e07a1f; }
+    .fill-pde { fill: #1f6feb; }
+    .fill-rcn { fill: #e07a1f; }
+    .label    { font-size: 11px; fill: #333; text-anchor: middle; }
+    .glyph    { font-size: 16px; font-style: italic; }
+  </style>
+
+  <!-- ─────────── Inverse PDE icon ─────────── -->
+  <g transform="translate(20,20)">
+    <!-- spatial grid -->
+    <rect class="stroke pde" x="10"  y="20" width="60" height="60"/>
+    <line class="stroke pde" x1="30" y1="20" x2="30" y2="80"/>
+    <line class="stroke pde" x1="50" y1="20" x2="50" y2="80"/>
+    <line class="stroke pde" x1="10" y1="40" x2="70" y2="40"/>
+    <line class="stroke pde" x1="10" y1="60" x2="70" y2="60"/>
+
+    <!-- diffusion / flow arrows inside grid -->
+    <path class="stroke pde" d="M 20 70 Q 40 55 60 70"/>
+    <polygon class="fill-pde" points="60,70 55,67 56,72"/>
+    <path class="stroke pde" d="M 20 30 Q 40 45 60 30"/>
+    <polygon class="fill-pde" points="60,30 55,33 56,28"/>
+
+    <!-- PDE glyph -->
+    <text class="glyph fill-pde" x="80" y="18">&#8711;&#178;</text>
+
+    <!-- inverse arrow: grid -> parameters -->
+    <path class="stroke pde" d="M 75 50 L 105 50"/>
+    <polygon class="fill-pde" points="105,50 99,47 99,53"/>
+
+    <!-- parameter tag -->
+    <rect class="stroke pde" x="108" y="38" width="34" height="24" rx="4"/>
+    <text class="glyph fill-pde" x="125" y="55" text-anchor="middle">&#952;</text>
+
+    <text class="label" x="75" y="110">Inverse PDE</text>
+  </g>
+
+  <!-- ─────────── Recurrent ConvNet icon ─────────── -->
+  <g transform="translate(180,20)">
+    <!-- three stacked feature maps (offset to suggest depth) -->
+    <rect class="stroke rcn" x="30" y="30" width="50" height="50"/>
+    <rect class="stroke rcn" x="25" y="25" width="50" height="50"/>
+    <rect class="stroke rcn" x="20" y="20" width="50" height="50"/>
+
+    <!-- small conv kernel on the front map -->
+    <rect class="stroke rcn" x="28" y="28" width="14" height="14"/>
+
+    <!-- recurrent loop: right side back to left, under the stack -->
+    <path class="stroke rcn"
+          d="M 80 55 Q 110 55 110 95 Q 110 110 55 110 Q 20 110 20 85"
+          stroke-dasharray="0"/>
+    <polygon class="fill-rcn" points="20,85 17,92 23,92"/>
+
+    <!-- time glyph t -->
+    <text class="glyph fill-rcn" x="108" y="50">t</text>
+
+    <text class="label" x="65" y="135">Recurrent ConvNet</text>
+  </g>
+</svg>

@@ -1,0 +1,5 @@
+experiment,target_epochs,timed_epochs,setup_seconds,mean_epoch_seconds,estimated_full_run_seconds,estimated_full_run_hms,peak_gpu_memory_mb,device,gpu_name,notes
+invPDE_synthetic_1site,7500,20,2.84,0.9661,7245.9,2h 0m 45s,435.2,cuda,NVIDIA A100-SXM4-40GB,
+invPDE_synthetic_4site,7500,20,3.60,3.7951,28463.0,7h 54m 22s,1720.1,cuda,NVIDIA A100-SXM4-40GB,
+rcnn_synthetic_4site,1000,20,8.77,2.3247,2324.7,38m 44s,25504.2,cuda,NVIDIA A100-SXM4-40GB,
+invPDE_real_4site,7500,20,0.37,12.1013,90759.5,25h 12m 39s,6843.7,cuda,NVIDIA A100-SXM4-40GB,
