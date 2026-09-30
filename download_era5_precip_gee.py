@@ -22,6 +22,14 @@ except Exception:
     ee.Authenticate()
     ee.Initialize()
 
+# ERA5-Land daily aggregates. The older 'ECMWF/ERA5/DAILY' collection stops on
+# 2020-07-09, which silently truncated the subsite_j and subsite_k downloads.
+# `total_precipitation_sum` is also the column name in the annual totals, which
+# suggests they came from ERA5-Land too.
+ERA5_COLLECTION = 'ECMWF/ERA5_LAND/DAILY_AGGR'
+ERA5_BAND = 'total_precipitation_sum'   # metres per day
+ERA5_SCALE_M = 11132                    # native resolution, 0.1 degree
+
 
 def parse_aoi(aoi_path: str) -> dict:
     """
@@ -40,6 +48,9 @@ def parse_aoi(aoi_path: str) -> dict:
 
     lons = [float(p[0]) for p in pairs]
     lats = [float(p[1]) for p in pairs]
+    if max(abs(v) for v in lons) > 180 or max(abs(v) for v in lats) > 90:
+        raise ValueError(f"{aoi_path} holds projected coordinates, not lon/lat degrees; "
+                         f"use download_missing_weekly_precip.py, which reads the bbox from the GeoTIFFs")
 
     return {
         'north': max(lats),
@@ -60,9 +71,9 @@ def fetch_and_process_weekly_csv(subsite_name: str, bbox: dict, output_csv: str,
     start_date = ee.Date.fromYMD(years[0], 1, 1)
     end_date = ee.Date.fromYMD(years[-1] + 1, 1, 1) # Exclusive end date
 
-    # 2. Query the ECMWF/ERA5/DAILY collection
-    collection = ee.ImageCollection('ECMWF/ERA5/DAILY') \
-        .select('total_precipitation') \
+    # 2. Query the daily collection
+    collection = ee.ImageCollection(ERA5_COLLECTION) \
+        .select(ERA5_BAND) \
         .filterDate(start_date, end_date)
 
     # 3. Spatially average each daily image over the bounding box
@@ -70,12 +81,12 @@ def fetch_and_process_weekly_csv(subsite_name: str, bbox: dict, output_csv: str,
         mean_dict = img.reduceRegion(
             reducer=ee.Reducer.mean(),
             geometry=geom,
-            scale=27830,  # ERA5 approximate scale in meters (~27.83 km)
+            scale=ERA5_SCALE_M,
             maxPixels=1e9
         )
         return ee.Feature(None, {
             'date': img.date().format('YYYY-MM-dd'),
-            'precip_m': mean_dict.get('total_precipitation')
+            'precip_m': mean_dict.get(ERA5_BAND)
         })
 
     # Execute the reduction and fetch the time series data to the local machine
@@ -87,11 +98,20 @@ def fetch_and_process_weekly_csv(subsite_name: str, bbox: dict, output_csv: str,
     records = [f['properties'] for f in ts_data['features']]
     daily_df = pd.DataFrame(records)
     
-    # Handle any potential nulls (e.g., if geometry is extremely small/invalid)
-    daily_df['precip_m'] = pd.to_numeric(daily_df['precip_m']).fillna(0.0)
-    
+    # Missing data must not be written as zero rain: the model reads it as drought.
+    daily_df['precip_m'] = pd.to_numeric(daily_df['precip_m'])
     daily_df['date'] = pd.to_datetime(daily_df['date'])
     daily_df = daily_df.sort_values('date').reset_index(drop=True)
+
+    n_null = int(daily_df['precip_m'].isna().sum())
+    if n_null:
+        raise ValueError(f"{subsite_name}: {n_null} days with no value over the bounding box "
+                         f"{bbox} (first: {daily_df.loc[daily_df['precip_m'].isna(), 'date'].iloc[0].date()})")
+    expected = pd.date_range(f"{years[0]}-01-01", f"{years[-1]}-12-31", freq='D')
+    missing = expected.difference(daily_df['date'])
+    if len(missing):
+        raise ValueError(f"{subsite_name}: {ERA5_COLLECTION} has no data for {len(missing)} of "
+                         f"{len(expected)} days ({missing[0].date()} to {missing[-1].date()})")
 
     # 5. Process to weekly (identical to original logic)
     daily_df['precip_mm'] = daily_df['precip_m'] * 1000.0
@@ -113,7 +133,7 @@ def fetch_and_process_weekly_csv(subsite_name: str, bbox: dict, output_csv: str,
         columns=['year', 'week']
     )
     weekly = full_index.merge(weekly, on=['year', 'week'], how='left')
-    weekly['precipitation_mm_per_day'] = weekly['precipitation_mm_per_day'].fillna(0.0)
+    assert not weekly['precipitation_mm_per_day'].isna().any()  # every day was checked above
 
     # 6. Save and print summary
     weekly.to_csv(output_csv, index=False)

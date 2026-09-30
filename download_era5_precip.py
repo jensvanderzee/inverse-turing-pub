@@ -142,14 +142,18 @@ def process_to_weekly_csv(nc_path: str, output_csv: str, subsite_name: str):
               .reset_index()
               .rename(columns={'precip_mm': 'precipitation_mm_per_day'}))
 
-    # Ensure all year-week combinations exist (fill missing with 0)
+    # Ensure all year-week combinations exist. A missing week is missing data, not
+    # zero rain, so fail rather than write zeros the model would read as drought.
     years = sorted(weekly['year'].unique())
     full_index = pd.DataFrame(
         [(y, w) for y in years for w in range(1, 53)],
         columns=['year', 'week']
     )
     weekly = full_index.merge(weekly, on=['year', 'week'], how='left')
-    weekly['precipitation_mm_per_day'] = weekly['precipitation_mm_per_day'].fillna(0.0)
+    missing = weekly[weekly['precipitation_mm_per_day'].isna()]
+    if len(missing):
+        raise ValueError(f"{subsite_name}: no precipitation data for {len(missing)} weeks, "
+                         f"first {missing.iloc[0]['year']} week {missing.iloc[0]['week']}")
 
     weekly.to_csv(output_csv, index=False)
 

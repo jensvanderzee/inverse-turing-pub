@@ -19,12 +19,12 @@ Options
     --precip-max 355
     --precip-step 3
     --years 1000          simulated years per rainfall level
-    --steps-per-week 4
+    --steps-per-week 3    must match the value used at fit time
     --init-site a         subsite whose first year provides the initial field
     --out <dir>
 
 Cost: `n_models x n_levels` independent rollouts of `years x 52 x steps_per_week`
-Euler steps. The published settings are ~35 models x 34 levels x 208k steps; with
+Euler steps. The published sweep used 4 steps/week: ~35 models x 34 levels x 208k steps; with
 `-t auto` on 32 cores expect a few hours. Use `--years 200` for a quick look —
 the branch positions move slightly but the qualitative shape is already there.
 """
@@ -45,7 +45,7 @@ const PRECIP_MIN = argfloat("precip-min", 255.0)
 const PRECIP_MAX = argfloat("precip-max", 355.0)
 const PRECIP_STEP = argfloat("precip-step", 3.0)
 const YEARS = argint("years", 1000)
-const STEPS_PER_WEEK = argint("steps-per-week", 4)
+const STEPS_PER_WEEK = argint("steps-per-week", 3)
 const INIT_SITE = string(argval("init-site", "a"))
 const MULTIPLIER = argfloat("multiplier", 1500.0)
 const OUTDIR = string(argval("out", joinpath(OUT_ROOT, "bifurcation")))

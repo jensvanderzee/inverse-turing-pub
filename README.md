@@ -33,6 +33,13 @@ also kept out of the repository.
 - **Held-out testing:** subsites `f`, `k`, `j`
 - **Initial conditions for forward simulations:** subsite `a`
 
+The weekly precipitation CSVs for held-out subsites `k` (every year) and `j` (2020
+onwards) are incomplete: they came from an Earth Engine collection that ends in July
+2020, with the missing days written as zero rain. The loaders detect a weekly record
+that delivers less than half the annual total and fall back to the annual total spread
+evenly across 52 weeks. Re-fetch those two files with
+`download_missing_weekly_precip.py` to replace the fallback with real weekly forcing.
+
 ## Scripts
 
 Run all scripts from the repository root. Many are written as `#%%` cells

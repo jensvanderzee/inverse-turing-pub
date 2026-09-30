@@ -32,6 +32,9 @@ from download_era5_precip_gee import fetch_and_process_weekly_csv
 SUBSITES = ["subsite_j", "subsite_k"]   # subsites to process
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 YEARS    = list(range(2013, 2024))       # match existing data range
+# The CSVs first written for j and k came from a collection that ends in July 2020,
+# with the gaps filled as zero rain (all of k, 2020-2023 for j). Re-fetch them.
+OVERWRITE = True
 
 
 def extract_bbox_from_tiffs(ndvi_dir: str) -> dict:
@@ -114,7 +117,7 @@ def main():
         os.makedirs(precip_dir, exist_ok=True)
         csv_path = os.path.join(precip_dir, f"{subsite_name}_weekly_precip.csv")
 
-        if os.path.exists(csv_path):
+        if os.path.exists(csv_path) and not OVERWRITE:
             print(f"  Weekly CSV already exists, skipping: {csv_path}")
         else:
             fetch_and_process_weekly_csv(subsite_name, bbox, csv_path, YEARS)

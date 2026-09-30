@@ -197,6 +197,15 @@ This does not say which parameter values are right — only that the flagged one
 not converged at the discretisation they were fitted with, so any conclusion resting
 on them deserves a re-fit at a finer step.
 
+**Incomplete weekly rainfall falls back to the annual total.** The committed
+weekly CSVs for held-out sites `k` (all years) and `j` (2020 on) are truncated
+downloads with the gap written as zero rain. `load_site` clips negative rates and,
+where a year's weekly record delivers under half its annual total, spreads the
+annual total flat — as the Python loader now does. The published held-out metrics
+predate this, so the reference checks load with `check_weekly = false` and score at
+4 steps/week, the setting those outputs were produced with; new evaluations use the
+fit setting, 3.
+
 **The loss is fitted on differences, not absolute fields.** `delta_loss = true`
 (the default, `use_delta_loss` in Python) scores the year-on-year *change* in
 biomass. This removes each site's static spatial mean from the objective, so the

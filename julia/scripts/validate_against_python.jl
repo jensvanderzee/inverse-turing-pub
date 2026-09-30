@@ -38,6 +38,8 @@ const TEST_METRICS = joinpath(REPO, "results", "real_data", "test_results", "tes
 const DATA_INFO = joinpath(REPO, "results", "real_data", "data_info.json")
 
 const MULTIPLIER = 1500.0
+# The published Python outputs were scored at 4 steps/week from the raw weekly CSVs,
+# so these checks reproduce that (see `check_weekly = false` below), not the fit setting.
 const STEPS_PER_WEEK = 4
 const TRAIN_SITES = ["b", "i", "c", "e"]
 const TEST_SITES = ["f", "k", "j"]
@@ -64,7 +66,8 @@ println("=" ^ 118)
 println("\n[1] NDVI -> biomass conversion and site statistics  (target: results/real_data/data_info.json)")
 if isfile(DATA_INFO)
     ref = JSON.parsefile(DATA_INFO)["global_stats"]
-    sites = load_sites(DATA_DIR, TRAIN_SITES; multiplier = MULTIPLIER, T = Float32)
+    sites = load_sites(DATA_DIR, TRAIN_SITES; multiplier = MULTIPLIER, T = Float32,
+                       check_weekly = false)
     stats = biomass_stats(sites)
     check("min per-image mean biomass", stats.min_biomass, ref["min_biomass"]; rtol = 1e-6)
     check("max per-image mean biomass", stats.max_biomass, ref["max_biomass"]; rtol = 1e-6)
@@ -97,7 +100,8 @@ if isfile(TEST_METRICS)
     ref_df = CSV.read(TEST_METRICS, DataFrames.DataFrame)
     cfg = SimConfig(steps_per_week = STEPS_PER_WEEK, year_time_units = 1.0)
     test_data = Dict(s.name => s for s in
-                     load_sites(DATA_DIR, TEST_SITES; multiplier = MULTIPLIER, T = Float32))
+                     load_sites(DATA_DIR, TEST_SITES; multiplier = MULTIPLIER, T = Float32,
+                                check_weekly = false))
 
     # Evaluating every model against every site is the full published table; keep
     # it to a representative subset unless RUN_ALL is set, since each entry is a

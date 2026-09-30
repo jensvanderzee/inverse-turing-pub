@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import os
 import json
 
-from realdata_train_invPDE import invRietkerk, RealDataLoader, EcologicalParameters
+from realdata_train_invPDE import invRietkerk, RealDataLoader, EcologicalParameters, fit_steps_per_week
 
 # ── Configuration ───────────────────────────────────────────────────────────
 PARAM_CSV = "results/parameter_history_analysis/four_site_final_parameter_values.csv"
@@ -21,7 +21,8 @@ DATA_DIR = "data"
 TEST_SITES = ["f", "k", "j"]
 SAVE_DIR = "results/real_data/test_results"
 NDVI_TO_BIOMASS_MULTIPLIER = 1500.0
-STEPS_PER_WEEK = 4
+# Must match the fit: the coefficients belong to the training discretisation.
+STEPS_PER_WEEK = fit_steps_per_week()
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 PARAM_NAMES = [

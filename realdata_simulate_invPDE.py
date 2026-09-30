@@ -14,7 +14,7 @@ import torch
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 
-from realdata_train_invPDE import invRietkerk, RealDataLoader
+from realdata_train_invPDE import invRietkerk, RealDataLoader, fit_steps_per_week
 
 # ════════════════════════════════════════════════════════════════════════════
 # SETTINGS — change these before running
@@ -31,7 +31,8 @@ PARAM_CSV = "results/parameter_history_analysis/four_site_final_parameter_values
 DATA_DIR = "data"
 SAVE_DIR = "results/real_data/simulation_results"
 NDVI_TO_BIOMASS_MULTIPLIER = 1500.0
-STEPS_PER_WEEK = 4
+# Must match the fit: the coefficients belong to the training discretisation.
+STEPS_PER_WEEK = fit_steps_per_week()
 
 PARAM_NAMES = [
     "surface_water_diffusion_coeff",
