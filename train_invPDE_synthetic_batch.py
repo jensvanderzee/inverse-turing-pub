@@ -337,7 +337,7 @@ class Args:
     start = 0
     end = 1
     gpu = 0
-    output_dir = "synthetic_results_1site"
+    output_dir = os.path.join("results", "synthetic_invPDE_4site")
 args = Args()
 os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
