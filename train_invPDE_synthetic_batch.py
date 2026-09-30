@@ -337,7 +337,9 @@ class Args:
     start = 0
     end = 1
     gpu = 0
-    output_dir = os.path.join("results", "synthetic_invPDE_4site")
+    # Not results/synthetic_invPDE_4site: those published runs were generated with
+    # different ground-truth coefficients than EcologicalParameters above.
+    output_dir = os.path.join("results", "synthetic_invPDE_4site_v2")
 args = Args()
 os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
