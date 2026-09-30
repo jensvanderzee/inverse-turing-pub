@@ -1,13 +1,15 @@
 
 #%%
-import csv
 import os
 import pickle
 from glob import glob
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import rasterio
+
+from model_selection import mean_test_mse
 
 # Parameter order (matches compare_invPDE_synthetic_params.py for consistency).
 PARAM_NAMES = [
@@ -329,20 +331,13 @@ def print_latex_table(runs, B=None):
 
 
 def load_test_mse():
-    """Return {model_id: mean_mse} averaged across test sites from test_metrics.csv."""
+    """Return {model_id: mean_mse} averaged across test sites from test_metrics.csv.
+
+    NaN for a model that diverged on any site, rather than its mean over the rest.
+    """
     mse_map = {}
     try:
-        site_totals, site_counts = {}, {}
-        with open(TEST_METRICS_CSV, newline="") as f:
-            for row in csv.DictReader(f):
-                mid = int(row["model_id"])
-                mse_str = row.get("mse", "").strip()
-                if mse_str:
-                    site_totals[mid] = site_totals.get(mid, 0.0) + float(mse_str)
-                    site_counts[mid]  = site_counts.get(mid, 0) + 1
-        for mid, total in site_totals.items():
-            if site_counts[mid] > 0:
-                mse_map[mid] = total / site_counts[mid]
+        mse_map = mean_test_mse(pd.read_csv(TEST_METRICS_CSV)).to_dict()
     except FileNotFoundError:
         print(f"Warning: {TEST_METRICS_CSV} not found; test MSE column will be NaN.")
     return mse_map

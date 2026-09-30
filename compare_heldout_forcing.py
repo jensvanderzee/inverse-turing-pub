@@ -37,6 +37,7 @@ from realdata_test_invPDE import (
     build_model_from_row, evaluate_model_on_site, load_parameters,
 )
 from realdata_train_invPDE import RealDataLoader
+from model_selection import mean_test_mse
 
 PUBLISHED_STEPS_PER_WEEK = 4
 SAVE_DIR = "results/real_data/heldout_forcing_comparison"
@@ -89,12 +90,9 @@ def summarise(long_df: pd.DataFrame, baselines: dict) -> pd.DataFrame:
 
 
 def mean_mse_per_model(long_df: pd.DataFrame) -> pd.DataFrame:
-    """Mean MSE across sites, one column per setup. A model that diverges on any
-    site gets NaN: skipping the NaN would rank it on the sites it survived."""
-    return (long_df.replace([np.inf, -np.inf], np.nan)
-            .groupby(["setup", "model_id"], sort=False)["mse"]
-            .apply(lambda v: v.mean(skipna=False))
-            .unstack("setup"))
+    """Mean MSE across sites, one column per setup; NaN if the model diverged anywhere."""
+    return pd.DataFrame({setup: mean_test_mse(g)
+                         for setup, g in long_df.groupby("setup", sort=False)})
 
 
 def plot_published_vs_fixed(long_df: pd.DataFrame, path: str):

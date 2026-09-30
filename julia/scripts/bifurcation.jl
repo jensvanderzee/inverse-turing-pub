@@ -82,8 +82,13 @@ best_id = if isfile(METRICS_CSV)
     m = CSV.read(METRICS_CSV, DataFrames.DataFrame)
     per = DataFrames.combine(DataFrames.groupby(m, :model_id), :mse => Statistics.mean => :mean_mse)
     per = per[in.(per.model_id, Ref(Set(model_ids))), :]
-    id = per[argmin(per.mean_mse), :model_id]
-    @printf("\nBest model by held-out MSE: %d (%.2f)\n", id, minimum(per.mean_mse))
+    # A model that diverged on any site has a NaN or missing mean and cannot be best;
+    # `argmin` would otherwise return the NaN entry.
+    per = per[isfinite.(coalesce.(per.mean_mse, NaN)), :]
+    DataFrames.nrow(per) == 0 && error("every model diverged on at least one held-out site")
+    i = argmin(per.mean_mse)
+    id = per[i, :model_id]
+    @printf("\nBest model by held-out MSE: %d (%.2f)\n", id, per[i, :mean_mse])
     id
 else
     @warn "no held-out metrics; highlighting the first model instead" METRICS_CSV

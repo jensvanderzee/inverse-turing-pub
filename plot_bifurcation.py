@@ -10,6 +10,7 @@ from matplotlib.colors import Normalize
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 from realdata_train_invPDE import invRietkerk, RealDataLoader, fit_steps_per_week
+from model_selection import best_model_by_test_mse
 
 #%%
 # ── Paths ────────────────────────────────────────────────────────────────────
@@ -55,9 +56,8 @@ results       = sweep_df.values  # (n_models, n_precip)
 
 # Identify best model by mean test MSE
 test_df  = pd.read_csv(TEST_METRICS_CSV)
-mean_mse = test_df.groupby("model_id")["mse"].mean()
-best_id  = int(mean_mse.idxmin())
-print(f"Best model: {best_id}  (mean MSE = {mean_mse[best_id]:.4f})")
+best_id, best_mse = best_model_by_test_mse(test_df)
+print(f"Best model: {best_id}  (mean MSE = {best_mse:.4f})")
 
 best_idx = model_ids.index(best_id)
 

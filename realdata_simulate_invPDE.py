@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 
 from realdata_train_invPDE import invRietkerk, RealDataLoader, fit_steps_per_week
+from model_selection import best_model_by_test_mse
 
 # ════════════════════════════════════════════════════════════════════════════
 # SETTINGS — change these before running
@@ -50,10 +51,8 @@ PARAM_NAMES = [
 # ── Helpers ─────────────────────────────────────────────────────────────────
 def find_best_model(test_csv: str) -> int:
     """Return the model_id with the lowest mean MSE across all test sites."""
-    df = pd.read_csv(test_csv)
-    mean_mse = df.groupby("model_id")["mse"].mean()
-    best_id = int(mean_mse.idxmin())
-    print(f"Best model by mean test MSE: model {best_id}  (MSE = {mean_mse[best_id]:.2f})")
+    best_id, best_mse = best_model_by_test_mse(pd.read_csv(test_csv))
+    print(f"Best model by mean test MSE: model {best_id}  (MSE = {best_mse:.2f})")
     return best_id
 
 

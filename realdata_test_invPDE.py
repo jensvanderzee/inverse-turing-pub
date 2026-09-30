@@ -14,6 +14,7 @@ import os
 import json
 
 from realdata_train_invPDE import invRietkerk, RealDataLoader, EcologicalParameters, fit_steps_per_week
+from model_selection import best_model_by_test_mse
 
 # ── Configuration ───────────────────────────────────────────────────────────
 PARAM_CSV = "results/parameter_history_analysis/four_site_final_parameter_values.csv"
@@ -261,9 +262,8 @@ def _plot_best_model_predictions(
 ):
     """For the best model (lowest mean test MSE), plot predicted vs observed biomass."""
     # Find best model by mean MSE across all test sites
-    mean_mse = results_df.groupby("model_id")["mse"].mean()
-    best_model_id = mean_mse.idxmin()
-    print(f"\n  Best model by mean test MSE: model {best_model_id} (MSE={mean_mse[best_model_id]:.2f})")
+    best_model_id, best_mse = best_model_by_test_mse(results_df)
+    print(f"\n  Best model by mean test MSE: model {best_model_id} (MSE={best_mse:.2f})")
 
     model = build_model_from_row(param_df.loc[best_model_id])
     model.eval()
