@@ -13,7 +13,8 @@ import matplotlib.pyplot as plt
 import os
 import json
 
-from realdata_train_invPDE import invRietkerk, RealDataLoader, EcologicalParameters
+from realdata_train_invPDE import invRietkerk, RealDataLoader, EcologicalParameters, fit_steps_per_week
+from model_selection import best_model_by_test_mse
 
 # ── Configuration ───────────────────────────────────────────────────────────
 PARAM_CSV = "results/parameter_history_analysis/four_site_final_parameter_values.csv"
@@ -21,7 +22,8 @@ DATA_DIR = "data"
 TEST_SITES = ["f", "k", "j"]
 SAVE_DIR = "results/real_data/test_results"
 NDVI_TO_BIOMASS_MULTIPLIER = 1500.0
-STEPS_PER_WEEK = 4
+# Must match the fit: the coefficients belong to the training discretisation.
+STEPS_PER_WEEK = fit_steps_per_week()
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 PARAM_NAMES = [
@@ -57,6 +59,7 @@ def build_model_from_row(row: pd.Series) -> invRietkerk:
 def evaluate_model_on_site(
     model: invRietkerk,
     time_series: list,
+    steps_per_week: int = STEPS_PER_WEEK,
 ) -> dict:
     """
     Run forward simulation on a single test site and compute metrics.
@@ -92,7 +95,7 @@ def evaluate_model_on_site(
                     pred_soil_water,
                     pred_biomass,
                     weekly_precipitation=weekly_precip,
-                    steps_per_week=STEPS_PER_WEEK,
+                    steps_per_week=steps_per_week,
                 )
             )
 
@@ -259,9 +262,8 @@ def _plot_best_model_predictions(
 ):
     """For the best model (lowest mean test MSE), plot predicted vs observed biomass."""
     # Find best model by mean MSE across all test sites
-    mean_mse = results_df.groupby("model_id")["mse"].mean()
-    best_model_id = mean_mse.idxmin()
-    print(f"\n  Best model by mean test MSE: model {best_model_id} (MSE={mean_mse[best_model_id]:.2f})")
+    best_model_id, best_mse = best_model_by_test_mse(results_df)
+    print(f"\n  Best model by mean test MSE: model {best_model_id} (MSE={best_mse:.2f})")
 
     model = build_model_from_row(param_df.loc[best_model_id])
     model.eval()

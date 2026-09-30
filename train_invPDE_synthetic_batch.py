@@ -27,6 +27,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from synthetic_ground_truth import GROUND_TRUTH_4SITE, YEAR_TIME_UNITS_4SITE
+
 # ===========================================================================
 #  0.  Reproducibility
 # ===========================================================================
@@ -44,22 +46,22 @@ def set_seed(seed: int = 42):
 # ===========================================================================
 class EcologicalParameters:
     # Diffusion coefficients
-    SURFACE_WATER_DIFFUSION = 8.0
-    SOIL_WATER_DIFFUSION = 1.0
-    BIOMASS_DIFFUSION = 0.05
+    SURFACE_WATER_DIFFUSION = GROUND_TRUTH_4SITE["surface_water_diffusion_coeff"]
+    SOIL_WATER_DIFFUSION = GROUND_TRUTH_4SITE["soil_water_diffusion_coeff"]
+    BIOMASS_DIFFUSION = GROUND_TRUTH_4SITE["biomass_diffusion_coeff"]
 
     # Loss rates
-    EVAPORATION_RATE = 0.3
-    SEEPAGE_RATE = 0.4
-    MORTALITY_RATE = 0.3
+    EVAPORATION_RATE = GROUND_TRUTH_4SITE["evaporation_rate"]
+    SEEPAGE_RATE = GROUND_TRUTH_4SITE["seepage_rate"]
+    MORTALITY_RATE = GROUND_TRUTH_4SITE["mortality_rate"]
 
     # Water cycle rates
-    INFILTRATION_RATE = 0.1
-    PLANT_UPTAKE_RATE = 0.15
+    INFILTRATION_RATE = GROUND_TRUTH_4SITE["infiltration_rate"]
+    PLANT_UPTAKE_RATE = GROUND_TRUTH_4SITE["plant_uptake_rate"]
 
     # Biological parameters
     BASE_PRECIPITATION = 0.675
-    WATER_USE_EFFICIENCY = 0.35
+    WATER_USE_EFFICIENCY = GROUND_TRUTH_4SITE["water_use_efficiency"]
     TIME_STEP = 1.0
 
     # Training parameters
@@ -167,7 +169,7 @@ class invRietkerk(nn.Module):
 
         num_weeks = len(weekly_precipitation)
         total_steps_per_year = num_weeks * steps_per_week
-        dt = 1.5 / total_steps_per_year
+        dt = YEAR_TIME_UNITS_4SITE / total_steps_per_year
 
         for week in range(num_weeks):
             real_weekly_volume = weekly_precipitation[week] * 7.0
@@ -416,7 +418,9 @@ for run_id in range(args.start, args.end + 1):
         "loss_history": loss_history,
         "num_epochs": len(loss_history),
         "final_loss": final_loss,
-        "elapsed_seconds": elapsed
+        "elapsed_seconds": elapsed,
+        "ground_truth": GROUND_TRUTH_4SITE,
+        "year_time_units": YEAR_TIME_UNITS_4SITE,
     }
 
     result_path = os.path.join(args.output_dir, "results", f"result_{run_id:02d}.json")

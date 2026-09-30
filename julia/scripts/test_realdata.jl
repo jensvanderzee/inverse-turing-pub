@@ -13,7 +13,7 @@ Usage
 Options
     --params <csv>        parameter table (default: the published four-site CSV)
     --sites f,k,j         held-out subsites
-    --steps-per-week 4    must match the value used at fit time
+    --steps-per-week 3    must match the value used at fit time
     --multiplier 1500     NDVI -> biomass scaling
     --out <dir>           output directory
     --plot-best           also render observed/predicted/difference maps
@@ -32,7 +32,7 @@ include(joinpath(@__DIR__, "common.jl"))
 const PARAM_CSV = string(argval("params", joinpath(PY_RESULTS, "parameter_history_analysis",
                                                    "four_site_final_parameter_values.csv")))
 const TEST_SITES = arglist("sites", ["f", "k", "j"])
-const STEPS_PER_WEEK = argint("steps-per-week", 4)
+const STEPS_PER_WEEK = argint("steps-per-week", 3)
 const MULTIPLIER = argfloat("multiplier", 1500.0)
 const OUTDIR = string(argval("out", joinpath(OUT_ROOT, "test_results")))
 const PLOT_BEST = argflag("plot-best")

@@ -109,8 +109,8 @@ Parse `<site>_weekly_precip.csv` into per-year vectors of mm/day rates, ordered
 by week.
 
 Values are passed through untouched, including the small negative rates that
-ERA5's accumulation differencing produces in dry weeks — the Python code feeds
-those to the model as-is, and clipping them here would change the fit.
+ERA5's accumulation differencing produces in dry weeks; [`load_site`](@ref) clips
+them unless asked to reproduce the original inputs.
 """
 function read_weekly_precip(path::AbstractString)
     df = CSV.read(path, DataFrames.DataFrame)
@@ -123,8 +123,25 @@ function read_weekly_precip(path::AbstractString)
 end
 
 """
+Fraction of the annual total below which a year's weekly precipitation record is
+treated as incomplete. On the training sites the weekly and annual products agree
+to within ~30 %; a truncated download (Earth Engine's `ECMWF/ERA5/DAILY` ends in
+July 2020) with the gap written as zero rain falls far below it.
+"""
+const MIN_WEEKLY_TO_ANNUAL_RATIO = 0.5
+
+"""
+    weekly_precip_is_complete(weekly_precip, annual_mm) -> Bool
+
+`false` if the weekly record delivers far less rain than the annual total. A
+missing annual total (`<= 0`) cannot be checked against and counts as complete.
+"""
+weekly_precip_is_complete(weekly_precip::AbstractVector, annual_mm::Real) =
+    annual_mm <= 0 || annual_total(weekly_precip) >= MIN_WEEKLY_TO_ANNUAL_RATIO * annual_mm
+
+"""
     load_site(data_dir, site; multiplier = 1500.0, T = Float64,
-              use_weekly_precip = true) -> SiteSeries{T}
+              use_weekly_precip = true, check_weekly = true) -> SiteSeries{T}
 
 Load one subsite. `site` may be the bare letter (`"b"`) or the full directory
 name (`"subsite_b"`).
@@ -132,10 +149,17 @@ name (`"subsite_b"`).
 Years present as a raster but missing from the precipitation table are skipped
 with a warning, as in the Python loader. When `use_weekly_precip` is true but a
 year has no weekly record, the annual total is spread flat across 52 weeks.
+
+With `check_weekly` (the default, and what the Python loader does) negative weekly
+rates are clipped to zero, and a year whose weekly record is incomplete (see
+[`weekly_precip_is_complete`](@ref)) also falls back to the flat annual total.
+The committed CSVs for `subsite_k` (every year) and `subsite_j` (2020 on) are
+incomplete. Pass `check_weekly = false` only to reproduce results computed before
+this check existed.
 """
 function load_site(data_dir::AbstractString, site::AbstractString;
                    multiplier::Real = 1500.0, T::Type = Float64,
-                   use_weekly_precip::Bool = true)
+                   use_weekly_precip::Bool = true, check_weekly::Bool = true)
     name = startswith(site, "subsite_") ? String(site) : "subsite_$site"
     dir = joinpath(data_dir, name)
     isdir(dir) || throw(ArgumentError("site directory not found: $dir"))
@@ -176,6 +200,13 @@ function load_site(data_dir::AbstractString, site::AbstractString;
         wk = use_weekly_precip ?
              get(weekly, year, uniform_weekly_precip(annual[year])) :
              uniform_weekly_precip(annual[year])
+        if use_weekly_precip && check_weekly && haskey(weekly, year)
+            wk = max.(wk, 0.0)
+            if !weekly_precip_is_complete(wk, annual[year])
+                @warn "weekly precipitation incomplete; using the annual total spread flat" site=name year=year weekly_mm=annual_total(wk) annual_mm=annual[year]
+                wk = uniform_weekly_precip(annual[year])
+            end
+        end
         push!(obs, YearObservation{T}(year, biomass, annual[year], wk))
     end
 

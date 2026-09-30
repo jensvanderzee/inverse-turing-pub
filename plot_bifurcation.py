@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
-from realdata_train_invPDE import invRietkerk, RealDataLoader
+from realdata_train_invPDE import invRietkerk, RealDataLoader, fit_steps_per_week
+from model_selection import best_model_by_test_mse
 
 #%%
 # ── Paths ────────────────────────────────────────────────────────────────────
@@ -26,7 +27,8 @@ SNAPSHOTS_PKL    = os.path.join(SAVE_DIR, "spatial_snapshots.pkl")
 INSET_PRECIP_VALUES = [267, 285, 294, 303, 318]
 
 NUM_YEARS            = 1000
-STEPS_PER_WEEK       = 3
+# Must match the fit: the coefficients belong to the training discretisation.
+STEPS_PER_WEEK       = fit_steps_per_week()
 NDVI_TO_BIOMASS_MULTIPLIER = 1500.0
 
 # Tier-1 filter thresholds (must match training script)
@@ -54,9 +56,8 @@ results       = sweep_df.values  # (n_models, n_precip)
 
 # Identify best model by mean test MSE
 test_df  = pd.read_csv(TEST_METRICS_CSV)
-mean_mse = test_df.groupby("model_id")["mse"].mean()
-best_id  = int(mean_mse.idxmin())
-print(f"Best model: {best_id}  (mean MSE = {mean_mse[best_id]:.4f})")
+best_id, best_mse = best_model_by_test_mse(test_df)
+print(f"Best model: {best_id}  (mean MSE = {best_mse:.4f})")
 
 best_idx = model_ids.index(best_id)
 

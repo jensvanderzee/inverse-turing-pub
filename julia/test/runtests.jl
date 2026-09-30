@@ -210,6 +210,10 @@ HAVE_DATA || @warn "data/ not found; data-dependent tests will be skipped" DATA_
         @test annual_total(summer_weekly_precip(300.0; days_per_week = 7)) ≈ 300.0
 
         @test annual_total(uniform_weekly_precip(365.0)) ≈ 52 * 7
+        @test weekly_precip_is_complete(uniform_weekly_precip(300.0), 300.0)
+        @test !weekly_precip_is_complete(zeros(52), 300.0)
+        @test !weekly_precip_is_complete([fill(1.0, 28); zeros(24)], 400.0)  # truncated mid-year
+        @test weekly_precip_is_complete(zeros(52), 0.0)   # no annual total to check against
         @test_throws ArgumentError summer_weekly_precip(300.0; start_week = 10, end_week = 5)
     end
 
@@ -604,6 +608,20 @@ HAVE_DATA || @warn "data/ not found; data-dependent tests will be skipped" DATA_
             @test_throws ArgumentError ndvi_biomass(joinpath(DATA_DIR, "nope.tif"))
             @test_throws ArgumentError load_site(DATA_DIR, "zzz")
 
+            # Incomplete weekly records fall back to the flat annual total: every year of
+            # subsite_k, and subsite_j from 2020 on (the download stops in July 2020).
+            k = load_site(DATA_DIR, "k"; T = Float32)
+            @test all(o -> o.weekly_precipitation == uniform_weekly_precip(o.precipitation),
+                      k.observations)
+            j = load_site(DATA_DIR, "j"; T = Float32)
+            for o in j.observations
+                flat = o.weekly_precipitation == uniform_weekly_precip(o.precipitation)
+                @test flat == (o.year >= 2020)
+            end
+            @test all(o -> all(>=(0), o.weekly_precipitation), site.observations)
+            raw = load_site(DATA_DIR, "k"; T = Float32, check_weekly = false)
+            @test all(o -> annual_total(o.weekly_precipitation) == 0, raw.observations)
+
             # Trajectory construction pairs year k's rain with year k+1's biomass.
             tr = SiteTrajectory(site)
             @test length(tr.targets) == 9
@@ -634,8 +652,9 @@ HAVE_DATA || @warn "data/ not found; data-dependent tests will be skipped" DATA_
             # realdata_test_invPDE.py does. Agreement here means the whole
             # pipeline matches, not just individual pieces.
             for sitename in ("subsite_f", "subsite_k")
+                # The reference was computed from the raw weekly CSVs.
                 series = load_site(DATA_DIR, replace(sitename, "subsite_" => "");
-                                   multiplier = 1500.0, T = Float32)
+                                   multiplier = 1500.0, T = Float32, check_weekly = false)
                 got = evaluate(p, series, cfg)
                 want = only(filter(r -> r.model_id == mid && r.site == sitename, eachrow(ref)))
                 @test got.num_transitions == want.num_transitions

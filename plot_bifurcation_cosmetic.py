@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
+from model_selection import best_model_by_test_mse
+
 # ── Paths (same as plot_bifurcation.py) ──────────────────────────────────────
 DATA_CSV         = "results/real_data/bifurcation/bifurcation_data.csv"
 TEST_METRICS_CSV = "results/real_data/test_results/test_metrics.csv"
@@ -25,8 +27,7 @@ model_ids     = list(sweep_df.index)
 results       = sweep_df.values
 
 test_df  = pd.read_csv(TEST_METRICS_CSV)
-mean_mse = test_df.groupby("model_id")["mse"].mean()
-best_id  = int(mean_mse.idxmin())
+best_id, _ = best_model_by_test_mse(test_df)
 best_idx = model_ids.index(best_id)
 
 with open(SNAPSHOTS_PKL, "rb") as f:

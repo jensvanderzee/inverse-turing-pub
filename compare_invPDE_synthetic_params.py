@@ -19,19 +19,8 @@ from glob import glob
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Ground-truth parameters (from EcologicalParameters in
-# train_invPDE_synthetic_batch.py, lines 45-73).
-GROUND_TRUTH = {
-    "infiltration_rate":            0.2,
-    "seepage_rate":                 0.8,
-    "plant_uptake_rate":            0.35,
-    "mortality_rate":               0.6,
-    "evaporation_rate":             0.6,
-    "water_use_efficiency":         0.35,
-    "surface_water_diffusion_coeff": 8.0,
-    "soil_water_diffusion_coeff":   1.0,
-    "biomass_diffusion_coeff":      0.05,
-}
+# Ground truth used by train_invPDE_synthetic_batch.py to generate the data.
+from synthetic_ground_truth import GROUND_TRUTH_4SITE as GROUND_TRUTH
 PARAM_NAMES = list(GROUND_TRUTH.keys())
 
 RESULTS_DIR = os.path.join("results", "synthetic_invPDE_4site", "results")

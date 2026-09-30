@@ -53,7 +53,8 @@ export SimConfig, SimState, simstate, copystate, step!, simulate_year!, simulate
        check_stability
 export sinusoidal_weekly_precip, summer_weekly_precip, uniform_weekly_precip, annual_total
 export ndvi_biomass, YearObservation, SiteSeries, load_site, load_sites, biomass_stats,
-       read_annual_precip, read_weekly_precip, years
+       read_annual_precip, read_weekly_precip, years,
+       weekly_precip_is_complete, MIN_WEEKLY_TO_ANNUAL_RATIO
 export SiteTrajectory, InverseProblem, loss, trajectory_loss, evaluate, ntransitions,
        rethread, mean_squared_delta_error, mean_squared_error
 export equilibrium_biomass, synthetic_series, synthetic_experiment

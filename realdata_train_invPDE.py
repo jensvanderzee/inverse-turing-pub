@@ -33,6 +33,38 @@ def set_seed(seed: int = 42):
 
 set_seed(42)
 
+# Euler sub-steps per forcing week used to fit the real-data models. The fitted
+# coefficients belong to this discretisation (several fits are not converged in
+# dt), so every script that evaluates them must integrate with the same value.
+STEPS_PER_WEEK = 3
+REALDATA_MODEL_DIR = "./results/real_data/models"
+
+
+def fit_steps_per_week(model_dir: str = REALDATA_MODEL_DIR) -> int:
+    """steps_per_week recorded in the training run's data_info.json, else STEPS_PER_WEEK."""
+    path = os.path.join(model_dir, "data_info.json")
+    try:
+        with open(path) as f:
+            return int(json.load(f)["weekly_precip_config"]["steps_per_week"])
+    except (FileNotFoundError, KeyError):
+        print(f"Warning: no steps_per_week recorded in {path}; using {STEPS_PER_WEEK}")
+        return STEPS_PER_WEEK
+
+
+# A weekly precipitation record whose total is below this fraction of the annual
+# total is treated as incomplete. On the training sites the two products agree to
+# within ~30 %; a truncated download (ERA5/DAILY in Earth Engine ends July 2020) or
+# missing days written as zero fall far below it.
+MIN_WEEKLY_TO_ANNUAL_RATIO = 0.5
+
+
+def weekly_precip_is_complete(weekly_mm_per_day: List[float], annual_mm: float) -> bool:
+    """False if the weekly record delivers far less rain than the annual total."""
+    if annual_mm <= 0:
+        return True  # no annual total to check against
+    weekly_total_mm = sum(weekly_mm_per_day) * 7.0
+    return weekly_total_mm >= MIN_WEEKLY_TO_ANNUAL_RATIO * annual_mm
+
 # Model parameters (kept similar to original)
 class EcologicalParameters:
     # Diffusion coefficients
@@ -250,11 +282,15 @@ class invRietkerk(nn.Module):
 class RealDataLoader:
     def __init__(self, data_dir: str, selected_sites: List[str] = None,
                  device: Optional[torch.device] = None,
-                 use_weekly_precip: bool = True):
+                 use_weekly_precip: bool = True,
+                 check_weekly: bool = True):
         self.data_dir = data_dir
         self.selected_sites = selected_sites
         self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.use_weekly_precip = use_weekly_precip
+        # False passes the weekly CSVs through untouched (no clipping, no completeness
+        # check); only for reproducing results computed before the check existed.
+        self.check_weekly = check_weekly
         self.location_data = {}
         self.scaler = StandardScaler()
 
@@ -339,7 +375,11 @@ class RealDataLoader:
                 weekly_df = pd.read_csv(weekly_precip_file)
                 for year in weekly_df['year'].unique():
                     year_data = weekly_df[weekly_df['year'] == year].sort_values('week')
-                    weekly_precip_dict[int(year)] = year_data['precipitation_mm_per_day'].tolist()
+                    # ERA5 contains tiny negative values (~-1e-5 mm/day); rain cannot be negative
+                    rates = year_data['precipitation_mm_per_day']
+                    if self.check_weekly:
+                        rates = rates.clip(lower=0.0)
+                    weekly_precip_dict[int(year)] = rates.tolist()
                 print(f"  Loaded weekly precipitation: {len(weekly_precip_dict)} years")
             else:
                 print(f"  Warning: Weekly precipitation file not found: {weekly_precip_file}")
@@ -370,11 +410,20 @@ class RealDataLoader:
                         'precipitation': precip_dict[year]
                     }
                     if self.use_weekly_precip:
-                        if year in weekly_precip_dict:
+                        if year in weekly_precip_dict and (not self.check_weekly or weekly_precip_is_complete(
+                                weekly_precip_dict[year], precip_dict[year])):
                             entry['weekly_precipitation'] = weekly_precip_dict[year]
                         else:
                             # Fallback: distribute annual total evenly across 52 weeks
                             annual_mm = precip_dict[year]
+                            if year in weekly_precip_dict:
+                                weekly_total_mm = sum(weekly_precip_dict[year]) * 7.0
+                                print(f"  Warning: {location_name} weekly precipitation for {year} is incomplete "
+                                      f"({weekly_total_mm:.1f} mm vs annual {annual_mm:.1f} mm); "
+                                      f"using the annual total spread evenly across 52 weeks")
+                            else:
+                                print(f"  Warning: {location_name} has no weekly precipitation for {year}; "
+                                      f"using the annual total spread evenly across 52 weeks")
                             weekly_rate = annual_mm / 365.0  # mm/day
                             entry['weekly_precipitation'] = [weekly_rate] * 52
                     image_data.append(entry)
@@ -824,14 +873,17 @@ def train_models_real_data(data_dir: str,
                            save_dir: str = "",
                            ndvi_to_biomass_multiplier: float = 1500.0,
                            use_delta_loss: bool = True,
-                           steps_per_week: int = 7,
-                           use_weekly_precip: bool = True):
+                           steps_per_week: int = STEPS_PER_WEEK,
+                           use_weekly_precip: bool = True,
+                           model_ids: Optional[List[int]] = None):
     """
     Train multiple models with weekly precipitation forcing using real satellite data.
 
     Args:
-        steps_per_week: Number of integration sub-steps per week (default 7 = ~daily)
+        steps_per_week: Number of integration sub-steps per week
         use_weekly_precip: If True, load and use weekly precipitation CSVs
+        model_ids: Model indices to train (default: range(num_models)). Each index
+            fixes the seed and output filename, so a run can be split across jobs.
         Other args same as original
     """
 
@@ -892,10 +944,14 @@ def train_models_real_data(data_dir: str,
     results = []
     all_final_losses = []
 
+    if model_ids is None:
+        model_ids = list(range(num_models))
+    num_models = len(model_ids)
+
     print(f"\nTraining {num_models} models with weekly precipitation...")
 
-    for model_idx in range(num_models):
-        print(f"\nTraining model {model_idx + 1}/{num_models}...")
+    for i, model_idx in enumerate(model_ids):
+        print(f"\nTraining model {model_idx + 1} ({i + 1}/{num_models})...")
 
         # Use different seed for each model
         model_seed = 77 + model_idx * 102
@@ -1051,7 +1107,7 @@ averages from ERA5 daily data
 if __name__ == "__main__":
     # Set your data and save directory paths here
     data_directory = r"./data"
-    save_directory = r"./results/real_data/models"
+    save_directory = REALDATA_MODEL_DIR
 
     # Example usage with site selection and weekly precipitation
     selected_sites = ['b', 'i', 'c', 'e']
@@ -1069,7 +1125,7 @@ if __name__ == "__main__":
         num_models=10,
         ndvi_to_biomass_multiplier=1500,
         use_delta_loss=True,
-        steps_per_week=3,  # 7 sub-steps per week (~daily resolution)
+        steps_per_week=STEPS_PER_WEEK,
         use_weekly_precip=True,  # Use weekly precipitation CSVs
     )
 
